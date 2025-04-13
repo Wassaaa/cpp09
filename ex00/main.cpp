@@ -12,7 +12,7 @@ int main(int argc, char **argv)
         inputFile = argv[1];
     }
     else {
-        std::cout << "usage: ./" << argv[0] << " [input file]" << std::endl;
+        std::cout << "usage: " << argv[0] << " [input file]" << std::endl;
         return 1;
     }
     BitcoinExchange btc;
