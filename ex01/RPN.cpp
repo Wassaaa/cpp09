@@ -82,7 +82,7 @@ void RPN::calculateRPN(std::string &polish)
             throw std::runtime_error("Invalid token: " + token);
     }
     if (_stack.size() != 1) {
-        throw std::runtime_error("Invalid RPN expression: too many operands");
+        throw std::runtime_error("Invalid RPN expression");
     }
     std::cout << _stack.top() << std::endl;
 }
