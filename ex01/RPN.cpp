@@ -1,6 +1,7 @@
 #include "RPN.hpp"
 #include <sstream>
 #include <iostream>
+#include <limits>
 
 RPN::RPN()
 {}
@@ -50,21 +51,40 @@ void RPN::calculate(operators op)
 
     switch (op) {
     case OP_ADD:
+        if (a > 0 && b > std::numeric_limits<int>::max() - a) {
+            throw std::overflow_error("Addition overflow");
+        }
+        if (a < 0 && b < std::numeric_limits<int>::min() - a) {
+            throw std::underflow_error("Addition underflow");
+        }
         _stack.push(a + b);
         break;
     case OP_SUB:
+        if (a > 0 && b < std::numeric_limits<int>::min() + a) {
+            throw std::underflow_error("Subtraction underflow");
+        }
+        if (a < 0 && b > std::numeric_limits<int>::max() + a) {
+            throw std::overflow_error("Subtraction overflow");
+        }
         _stack.push(a - b);
         break;
     case OP_MUL:
+        if (a != 0 && (b > std::numeric_limits<int>::max() / a || b < std::numeric_limits<int>::min() / a)) {
+            throw std::overflow_error("Multiplication overflow");
+        }
         _stack.push(a * b);
         break;
     case OP_DIV:
-        if (b == 0)
+        if (b == 0) {
             throw std::runtime_error("Division by zero");
+        }
+        if (a == std::numeric_limits<int>::min() && b == -1) {
+            throw std::overflow_error("Division overflow");
+        }
         _stack.push(a / b);
         break;
     default:
-        break;
+        throw std::runtime_error("Unknown operator");
     }
 }
 
@@ -74,7 +94,7 @@ void RPN::calculateRPN(std::string &polish)
     std::istringstream iss(polish);
 
     while (iss >> token) {
-        if (std::isdigit(token[0]) || (token.size() > 1 && token[0] == '-' && isdigit(token[1])))
+        if ((token.size() == 1 && std::isdigit(token[0])) || (token.size() > 1 && token[0] == '-' && isdigit(token[1])))
             _stack.push(std::stoi(token));
         else if (token.size() == 1 && isOperator(token[0]))
             calculate(getOperator(token[0]));
