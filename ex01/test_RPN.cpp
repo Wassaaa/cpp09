@@ -20,18 +20,33 @@ bool runTest(const TestCase &test)
     RPN rpn;
     std::string expression = test.expression;
     bool isPassed = false;
+    bool exceptionCaught = false;
+
+    // Capture cout output
+    std::streambuf *old = std::cout.rdbuf();
+    std::stringstream ss;
+    std::cout.rdbuf(ss.rdbuf());
 
     try {
-        // Capture cout output
-        std::streambuf *old = std::cout.rdbuf();
-        std::stringstream ss;
-        std::cout.rdbuf(ss.rdbuf());
-
         rpn.calculateRPN(expression);
+    }
+    catch (const std::exception &e) {
+        exceptionCaught = true;
+        if (test.shouldThrow) {
+            std::cout.rdbuf(old);
+            std::cout << "PASSED (Expected exception: " << e.what() << ")" << std::endl;
+            return true;
+        }
+        else {
+            std::cout.rdbuf(old);
+            std::cout << "FAILED: Unexpected exception: " << e.what() << std::endl;
+            return false;
+        }
+    }
 
-        // Restore cout
-        std::cout.rdbuf(old);
+    std::cout.rdbuf(old);
 
+    if (!exceptionCaught) {
         std::string result = ss.str();
         // Remove newline if present
         if (!result.empty() && result[result.length() - 1] == '\n') {
@@ -48,16 +63,6 @@ bool runTest(const TestCase &test)
         }
         else {
             std::cout << "FAILED: Expected " << test.expectedOutput << ", got " << result << std::endl;
-            isPassed = false;
-        }
-    }
-    catch (const std::exception &e) {
-        if (test.shouldThrow) {
-            std::cout << "PASSED (Expected exception: " << e.what() << ")" << std::endl;
-            isPassed = true;
-        }
-        else {
-            std::cout << "FAILED: Unexpected exception: " << e.what() << std::endl;
             isPassed = false;
         }
     }
