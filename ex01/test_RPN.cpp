@@ -72,17 +72,23 @@ bool runTest(const TestCase &test)
 
 int main()
 {
-    std::vector<TestCase> tests = {{"Simple addition", "3 4 +", "7", false},
-                                   {"Simple subtraction", "3 4 -", "-1", false},
-                                   {"Simple multiplication", "3 4 *", "12", false},
-                                   {"Simple division", "12 3 /", "4", false},
-                                   {"Complex expression", "3 4 + 5 *", "35", false},
-                                   {"Negative numbers", "3 -4 +", "-1", false},
-                                   {"Division by zero", "3 0 /", "", true},
-                                   {"Insufficient operands", "3 +", "", true},
-                                   {"Too many operands", "3 4 5 +", "", true},
-                                   {"Invalid token", "3 4 &", "", true},
-                                   {"Empty expression", "", "", true}};
+    // {test_name, RPN expression, expected result, expect exception}
+    std::vector<TestCase> tests = {
+        {"Simple addition", "3 4 +", "7", false},
+        {"Simple subtraction", "3 4 -", "-1", false},
+        {"Simple multiplication", "3 4 *", "12", false},
+        {"Complex expression", "3 4 + 5 *", "35", false},
+        {"Negative numbers", "3 -4 +", "-1", false},
+        {"Different expression format", "9 9 9 * *", "729", false},
+        {"Simple division", "12 3 /", "", true},
+        {"Division by zero", "3 0 /", "", true},
+        {"Insufficient operands", "3 +", "", true},
+        {"Too many operands", "3 4 5 +", "", true},
+        {"Int overflow mult", "9 9 9 9 9 9 9 9 9 9 9 * * * * * * * * * * * *", "", true},
+        {"Int overflow add", "9 9 9 9 9 9 9 9 5 * * * * * * * * 9 9 9 9 9 9 9 9 9 5 * * * * * * * * * +", "", true},
+        {"Invalid token", "3 4 &", "", true},
+        {"Bad expression", "3 4", "", true},
+        {"Empty expression", "", "", true}};
 
     int passed = 0;
     int total = tests.size();
@@ -97,5 +103,5 @@ int main()
 
     std::cout << "\nTest run completed. " << passed << " of " << total << " tests passed.\n";
 
-    return (passed == total) ? 0 : 1; // Return non-zero exit code if any tests failed
+    return (passed == total) ? 0 : 1;
 }
