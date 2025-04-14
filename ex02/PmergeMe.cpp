@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <iostream>
+#include <cmath>
 
 PmergeMe::PmergeMe()
 {}
@@ -20,6 +21,17 @@ PmergeMe &PmergeMe::operator=(PmergeMe &other)
 }
 PmergeMe::~PmergeMe()
 {}
+
+size_t PmergeMe::jacobsthal_number(long n)
+{
+    return round((pow(2, n + 1) + pow(-1, n)) / 3);
+}
+
+bool PmergeMe::comp(vectorIt left, vectorIt right)
+{
+    comparisons++;
+    return *left < *right;
+}
 
 void PmergeMe::swapPair(vectorIt it, int level)
 {
@@ -43,7 +55,6 @@ void PmergeMe::addNumber(const std::string &number)
 
 void PmergeMe::mergeInsert(int level)
 {
-    printVerbose(level);
     int pairs = _vec.size() / level;
     if (pairs < 2)
         return;
@@ -51,24 +62,100 @@ void PmergeMe::mergeInsert(int level)
     int is_odd = pairs % 2 == 1;
 
     vectorIt start = _vec.begin();
-    vectorIt last = _vec.begin() + pairs * level;
+    vectorIt last = _vec.begin() + (pairs * level);
     vectorIt end = last - (is_odd * level);
     for (vectorIt it = start; it != end; it += jump) {
         vectorIt thisPair = it + level - 1;
         vectorIt nextPair = it + level * 2 - 1;
-        if (*nextPair < *thisPair) {
+        if (comp(nextPair, thisPair)) {
             swapPair(thisPair, level);
         }
     }
+
     mergeInsert(level * 2);
+    printVerbose(level);
+    std::vector<vectorIt> main;
+    std::vector<vectorIt> pend;
+
+    main.insert(main.end(), _vec.begin() + level - 1);
+    main.insert(main.end(), _vec.begin() + level * 2 - 1);
+
+    for (int i = 4; i <= pairs; i += 2) {
+        pend.insert(pend.end(), _vec.begin() + level * (i - 1) - 1);
+        main.insert(main.end(), _vec.begin() + level * i - 1);
+    }
+
+    if (is_odd) {
+        pend.insert(pend.end(), end + level - 1);
+    }
+
+    size_t prev_jacobsthal = jacobsthal_number(1);
+    size_t inserted_numbers = 0;
+    for (int k = 2;; k++) {
+        printMainAndPend(main, pend, level);
+        size_t curr_jacobsthal = jacobsthal_number(k);
+        size_t jacobsthal_diff = curr_jacobsthal - prev_jacobsthal;
+        int offset = 0;
+        if (jacobsthal_diff > pend.size())
+            break;
+        int nbr_of_times = jacobsthal_diff;
+        auto pend_it = pend.begin() + jacobsthal_diff - 1;
+        auto bound_it = main.begin() + curr_jacobsthal + inserted_numbers;
+        while (nbr_of_times) {
+            auto idx = std::upper_bound(main.begin(), bound_it, *pend_it, [this](vectorIt element, vectorIt value) {
+                return this->comp(element, value);
+            });
+            auto inserted = main.insert(idx, *pend_it);
+            nbr_of_times--;
+            pend_it = pend.erase(pend_it);
+            pend_it--;
+            offset += (inserted - main.begin()) == static_cast<int>(curr_jacobsthal + inserted_numbers);
+            bound_it = main.begin() + curr_jacobsthal + inserted_numbers - offset;
+        }
+        prev_jacobsthal = curr_jacobsthal;
+        inserted_numbers += jacobsthal_diff;
+        offset = 0;
+    }
+
+    for (ssize_t i = pend.size() - 1; i >= 0; i--) {
+        auto curr_pend = pend.begin() + i;
+        auto curr_bound = main.begin() + main.size() - pend.size() + i + is_odd;
+        auto idx = std::upper_bound(main.begin(), curr_bound, *curr_pend,
+                                    [this](vectorIt element, vectorIt value) { return this->comp(element, value); });
+        main.insert(idx, *curr_pend);
+    }
+
+    /* temp copy container for sorted main */
+    std::vector<int> copy;
+    copy.reserve(_vec.size());
+
+    for (auto it : main) {
+        for (int i = 0; i < level; i++) {
+            auto pair_start = it;
+            std::advance(pair_start, -level + i + 1);
+            copy.push_back(*pair_start);
+        }
+    }
+
+    /* Replace values in the original container. */
+    std::copy(copy.begin(), copy.end(), _vec.begin());
 }
 
-void PmergeMe::printVector()
+void PmergeMe::printMainAndPend(const std::vector<vectorIt> &main, const std::vector<vectorIt> &pend, int level)
 {
-    for (auto &nbr : _vec) {
-        std::cout << nbr << " ";
+    std::cout << "Level " << level << ":\n";
+
+    std::cout << "  Main vector: [ ";
+    for (const auto &it : main) {
+        std::cout << *it << " ";
     }
-    std::cout << std::endl;
+    std::cout << "]" << std::endl;
+
+    std::cout << "  Pend vector: [ ";
+    for (const auto &it : pend) {
+        std::cout << *it << " ";
+    }
+    std::cout << "]" << std::endl;
 }
 
 void PmergeMe::printVerbose(int level)
