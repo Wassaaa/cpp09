@@ -10,9 +10,7 @@ int main(int argc, char **argv)
         for (const auto &arg : args) {
             pmergeMe.addNumber(std::to_string(arg)); // Convert int to string
         }
-
-        pmergeMe.mergeInsert(1);
-        // std::cout << "jnr: " << pmergeMe.jacobsthal_number(23) << std::endl;
+        pmergeMe.sortAndTime();
         return 0;
     }
     if (argc > 1) {
@@ -21,7 +19,7 @@ int main(int argc, char **argv)
             pmergeMe.addNumber(argv[i]);
         }
 
-        pmergeMe.mergeInsert(1);
+        pmergeMe.sortAndTime();
     }
     else {
         std::cerr << "usage: " << argv[0] << " <list of integers>" << std::endl;
