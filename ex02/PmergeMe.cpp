@@ -75,7 +75,9 @@ void PmergeMe::mergeInsert(int level)
     mergeInsert(level * 2);
     printVerbose(level);
     std::vector<vectorIt> main;
+    main.reserve(pairs);
     std::vector<vectorIt> pend;
+    pend.reserve(pairs / 2 + is_odd);
 
     main.insert(main.end(), _vec.begin() + level - 1);
     main.insert(main.end(), _vec.begin() + level * 2 - 1);
@@ -95,7 +97,6 @@ void PmergeMe::mergeInsert(int level)
         printMainAndPend(main, pend, level);
         size_t curr_jacobsthal = jacobsthal_number(k);
         size_t jacobsthal_diff = curr_jacobsthal - prev_jacobsthal;
-        int offset = 0;
         if (jacobsthal_diff > pend.size())
             break;
         int nbr_of_times = jacobsthal_diff;
@@ -109,12 +110,13 @@ void PmergeMe::mergeInsert(int level)
             nbr_of_times--;
             pend_it = pend.erase(pend_it);
             pend_it--;
-            offset += (inserted - main.begin()) == static_cast<int>(curr_jacobsthal + inserted_numbers);
-            bound_it = main.begin() + curr_jacobsthal + inserted_numbers - offset;
+            // handle offset if insertion lands exactly where the bound is.
+            // offset += (inserted - main.begin()) == static_cast<int>(curr_jacobsthal + inserted_numbers);
+            bound_it = main.begin() + curr_jacobsthal + inserted_numbers;
+            bound_it -= (inserted == bound_it);
         }
         prev_jacobsthal = curr_jacobsthal;
         inserted_numbers += jacobsthal_diff;
-        offset = 0;
     }
 
     for (ssize_t i = pend.size() - 1; i >= 0; i--) {
