@@ -27,6 +27,13 @@ public:
     bool comp(dequeIt left, dequeIt right);
     void sortAndTime();
 
+    void printAlgorithmPhase(const std::string &phase, int level);
+    void printArrayState(const std::string &message);
+    void printPairComparison(vectorIt left, vectorIt right, bool swapped);
+    void printMainAndPendDetailed(const std::vector<vectorIt> &main, const std::vector<vectorIt> &pend, int level);
+    void printJacobsthalInsert(vectorIt pendElem, vectorIt insertPos, size_t jacNum);
+    void printGroupStructure(int level);
+
     int vecComparisons = 0;
     int deqComparisons = 0;
 

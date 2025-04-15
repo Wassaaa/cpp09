@@ -109,71 +109,124 @@ void PmergeMe::mergeInsertVector(int level)
     int jump = level * 2;
     int is_odd = pairs % 2 == 1;
 
+    printAlgorithmPhase("COMPARING AND SORTING PAIRS", level);
+    printArrayState("Before pair comparisons");
+    printGroupStructure(level);
+
     vectorIt start = container.begin();
     vectorIt last = container.begin() + (pairs * level);
     vectorIt end = last - (is_odd * level);
     for (vectorIt it = start; it != end; it += jump) {
         vectorIt thisPair = it + level - 1;
         vectorIt nextPair = it + level * 2 - 1;
-        if (comp(nextPair, thisPair)) {
+        bool willSwap = comp(nextPair, thisPair);
+        printPairComparison(thisPair, nextPair, willSwap);
+
+        if (willSwap) {
             swapPair(thisPair, level);
         }
     }
+    printArrayState("After pair comparisons");
+    printGroupStructure(level);
 
-    // printVerbose(level);
+    printAlgorithmPhase("RECURSIVE CALL", level * 2);
     mergeInsertVector(level * 2);
+
+    printAlgorithmPhase("BUILDING MAIN AND PEND CHAINS", level);
     std::vector<vectorIt> main;
     main.reserve(pairs);
     std::vector<vectorIt> pend;
     pend.reserve(pairs / 2 + is_odd);
 
+    std::cout << "\n  Adding first two elements to main chain\n";
     main.insert(main.end(), container.begin() + level - 1);
     main.insert(main.end(), container.begin() + level * 2 - 1);
 
+    std::cout << "\n  Distributing remaining elements between main and pend\n";
     for (int i = 4; i <= pairs; i += 2) {
         pend.insert(pend.end(), container.begin() + level * (i - 1) - 1);
         main.insert(main.end(), container.begin() + level * i - 1);
     }
 
     if (is_odd) {
+        std::cout << "\n  Adding odd final element to pend\n";
         pend.insert(pend.end(), end + level - 1);
     }
+
+    printMainAndPendDetailed(main, pend, level);
+
+    printAlgorithmPhase("JACOBSTHAL INSERTIONS", level);
+    std::cout << "\n  Jacobsthal sequence determines insertion order\n";
+    std::cout << "  This allows us to minimize comparisons by intelligently\n";
+    std::cout << "  choosing which elements to insert first\n\n";
 
     size_t prev_jacobsthal = jacobsthal_number(1);
     size_t inserted_numbers = 0;
     for (int k = 2;; k++) {
-        // printMainAndPend(main, pend, level);
         size_t curr_jacobsthal = jacobsthal_number(k);
         size_t jacobsthal_diff = curr_jacobsthal - prev_jacobsthal;
+
+        std::cout << "  Jacobsthal step: J(" << k << ") = " << curr_jacobsthal << ", inserting " << jacobsthal_diff
+                  << " elements\n";
+
         if (jacobsthal_diff > pend.size())
             break;
+
         int nbr_of_times = jacobsthal_diff;
         auto pend_it = pend.begin() + jacobsthal_diff - 1;
         auto bound_it = main.begin() + curr_jacobsthal + inserted_numbers;
+
         while (nbr_of_times) {
+            std::cout << "    Inserting element: " << *(*pend_it) << "\n";
+            std::cout << "    Search boundary: up to position " << std::distance(main.begin(), bound_it) << "\n";
+
             auto idx = std::upper_bound(main.begin(), bound_it, *pend_it, [this](vectorIt element, vectorIt value) {
                 return this->comp(element, value);
             });
+
+            std::cout << "    Found insertion point at position: " << std::distance(main.begin(), idx) << "\n";
+
             auto inserted = main.insert(idx, *pend_it);
             nbr_of_times--;
             pend_it = pend.erase(pend_it);
             pend_it--;
-            // handle offset if insertion lands exactly where the bound is.
-            // offset += (inserted - main.begin()) == static_cast<int>(curr_jacobsthal + inserted_numbers);
+
+            // handle offset if insertion lands exactly where the bound is
+            bool adjustedBoundary = (inserted == bound_it);
             bound_it = main.begin() + curr_jacobsthal + inserted_numbers;
-            bound_it -= (inserted == bound_it);
+            bound_it -= adjustedBoundary;
+
+            if (adjustedBoundary) {
+                std::cout << "    Adjusted boundary because insertion was at boundary\n";
+            }
+
+            printMainAndPendDetailed(main, pend, level);
         }
         prev_jacobsthal = curr_jacobsthal;
         inserted_numbers += jacobsthal_diff;
     }
 
+    printAlgorithmPhase("FINAL INSERTIONS", level);
+    std::cout << "\n  Inserting remaining elements from pend\n";
+
     for (ssize_t i = pend.size() - 1; i >= 0; i--) {
         auto curr_pend = pend.begin() + i;
         auto curr_bound = main.begin() + main.size() - pend.size() + i + is_odd;
+
+        std::cout << "  Inserting " << *(*curr_pend) << " with search bound up to "
+                  << std::distance(main.begin(), curr_bound) << "\n";
+
         auto idx = std::upper_bound(main.begin(), curr_bound, *curr_pend,
                                     [this](vectorIt element, vectorIt value) { return this->comp(element, value); });
+
+        std::cout << "  Found insertion point at position " << std::distance(main.begin(), idx) << "\n";
+
         main.insert(idx, *curr_pend);
+        printMainAndPendDetailed(main, pend, level);
     }
+
+    printAlgorithmPhase("FINAL RECONSTRUCTION", level);
+    std::cout << "\n  Building the final sorted array from main chain references\n";
 
     /* temp copy container for sorted main */
     std::vector<int> copy;
@@ -189,6 +242,8 @@ void PmergeMe::mergeInsertVector(int level)
 
     /* Replace values in the original container. */
     std::copy(copy.begin(), copy.end(), container.begin());
+
+    printArrayState("Final sorted array");
 }
 
 void PmergeMe::mergeInsertDeque(int level)
@@ -283,15 +338,14 @@ void PmergeMe::mergeInsertDeque(int level)
 
 void PmergeMe::printMainAndPend(const std::vector<vectorIt> &main, const std::vector<vectorIt> &pend, int level)
 {
-    std::cout << "Level " << level << ":\n";
-
-    std::cout << "  Main vector: [ ";
+    (void)level;
+    std::cout << "Main vector: [ ";
     for (const auto &it : main) {
         std::cout << *it << " ";
     }
     std::cout << "]" << std::endl;
 
-    std::cout << "  Pend vector: [ ";
+    std::cout << "Pend vector: [ ";
     for (const auto &it : pend) {
         std::cout << *it << " ";
     }
@@ -344,4 +398,54 @@ void PmergeMe::printVerbose(int level)
     }
 
     std::cout << std::endl;
+}
+
+void PmergeMe::printAlgorithmPhase(const std::string &phase, int level)
+{
+    std::cout << "\n=== " << phase << " (Level " << level << ") ===\n";
+}
+
+void PmergeMe::printArrayState(const std::string &message)
+{
+    std::cout << message << ": [ ";
+    for (size_t i = 0; i < _vec.size(); ++i) std::cout << _vec[i] << " ";
+    std::cout << "]\n";
+}
+
+void PmergeMe::printGroupStructure(int level)
+{
+    std::cout << "Groups (level " << level << "): ";
+    for (size_t i = 0; i < _vec.size(); i += level) {
+        std::cout << "[";
+        for (size_t j = i; j < i + level && j < _vec.size(); ++j)
+            std::cout << _vec[j] << (j + 1 < i + level && j + 1 < _vec.size() ? " " : "");
+        std::cout << "] ";
+    }
+    std::cout << "\n";
+}
+
+void PmergeMe::printPairComparison(vectorIt left, vectorIt right, bool swapped)
+{
+    std::cout << "Comparing " << *left << " and " << *right << (swapped ? " -> swapped\n" : " -> not swapped\n");
+}
+
+void PmergeMe::printMainAndPendDetailed(const std::vector<vectorIt> &main, const std::vector<vectorIt> &pend, int level)
+{
+    (void)level;
+    std::cout << "Main vector: [ ";
+    for (const auto &it : main) {
+        std::cout << *it << " ";
+    }
+    std::cout << "]" << std::endl;
+
+    std::cout << "Pend vector: [ ";
+    for (const auto &it : pend) {
+        std::cout << *it << " ";
+    }
+    std::cout << "]" << std::endl;
+}
+
+void PmergeMe::printJacobsthalInsert(vectorIt pendElem, vectorIt insertPos, size_t jacNum)
+{
+    std::cout << "Insert: " << *pendElem << " before " << *insertPos << " (Jacobsthal: " << jacNum << ")\n";
 }
